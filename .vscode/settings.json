@@ -1,0 +1,47 @@
+{
+  "importSorter.importStringConfiguration.maximumNumberOfImportExpressionsPerLine.type": "newLineEachExpressionAfterCountLimitExceptIfOnlyOne",
+  "importSorter.importStringConfiguration.maximumNumberOfImportExpressionsPerLine.count": 100,
+  "importSorter.sortConfiguration.removeUnusedImports": true,
+  "importSorter.sortConfiguration.customOrderingRules.defaultOrderLevel": 60,
+  "importSorter.sortConfiguration.customOrderingRules.rules": [
+    {
+      "regex": "^[@]",
+      "orderLevel": 10
+    },
+    {
+      "type": "importMember",
+      "regex": "^$",
+      "orderLevel": 20,
+      "disableSort": true
+    },
+    {
+      "regex": "^[.]",
+      "orderLevel": 40,
+      "disableSort": true
+    }
+  ],
+  "typescript.preferences.quoteStyle": "single",
+  "typescript.format.semicolons": "insert",
+  "typescript.preferences.importModuleSpecifier": "shortest",
+  "[typescript]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+  },
+  "files.exclude": {
+    "node_modules": true
+  },
+  "cSpell.words": [
+    "compodoc",
+    "dasherize",
+    "ngrx"
+  ],
+  "files.associations": {
+    "*.ts": "typescript"
+  },
+  "eslint.enable": true,
+  "jest.autoRun": {
+    "watch": false,
+    "onSave": "test-file",
+    "onStartup": ["all-tests"],
+  }
+}

@@ -1,0 +1,19 @@
+# Add files here to ignore them from prettier formatting
+
+/dist
+/coverage
+/reports
+/tmp
+/out-tsc
+
+# Node
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# IDEs and editors
+.idea/
+.project
+.angular
+
+**/*.template

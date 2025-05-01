@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "baseUrl": "tsconfig",
+    "lib": ["ES2022", "dom"],
+    "declaration": true,
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "node",
+    "noEmitOnError": false,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitThis": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noUnusedParameters": true,
+    "noUnusedLocals": true,
+    "skipDefaultLibCheck": true,
+    "skipLibCheck": true,
+    "rootDir": "src/",
+    "outDir": "./dist",
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["tests/**/*.spec.ts"]
+}
