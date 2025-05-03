@@ -11,7 +11,6 @@ import { defineConfig } from "eslint/config";
 export default defineConfig([
   {
     files: ["src/**/*.{js,mjs,cjs,ts}"],
-    //ignores: ['**/eslint.config.mjs', 'jest.config.ts', 'dist/**'],
     extends: [
       eslint.configs.recommended,
       ...tseslint.configs.recommended,
@@ -38,9 +37,14 @@ export default defineConfig([
   },
   {
     files: ['**/*.spec.ts', '**/*.test.ts'],
+    extends: [
+      ...tseslint.configs.recommended
+    ],
     plugins: { jest: pluginJest },
     languageOptions: {
-      globals: pluginJest.environments.globals.globals
+      globals: pluginJest.environments.globals.globals,
+      ecmaVersion: 'latest',
+      sourceType: 'module',
     },
     rules: pluginJest.configs.recommended.rules
   }
