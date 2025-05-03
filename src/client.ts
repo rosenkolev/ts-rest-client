@@ -1,10 +1,8 @@
 export type HttpRequestInit = RequestInit & { config?: Record<string, unknown> };
 export type HttpHandler<T = unknown> = (req: RequestInfo, init?: HttpRequestInit) => T;
-export type HttpRequest = Request;
-export type HttpResponse = Response;
 export interface Interceptor<TConfig, TRes, TOut> {
   init?: (config: TConfig) => void;
-  preRequest?: (request: HttpRequest, config: TConfig) => HttpRequest;
+  preRequest?: (request: Request, config: TConfig) => Request;
   postRequest?: (response: TRes, config: TConfig) => TOut;
 }
 
@@ -23,13 +21,13 @@ export interface HttpClientWrapper<TIn> {
 export type HttpClient<T> = HttpHandler<T> & HttpClientWrapper<T>;
 
 // Interceptor factory
-export function interceptor<TConfig = void, TIn = Promise<HttpResponse>, TOut = TIn>(handlers: {
+export function interceptor<TConfig = void, TIn = Promise<Response>, TOut = TIn>(handlers: {
   init?: (config?: TConfig) => void;
-  preRequest?: (req: HttpRequest, config?: TConfig) => HttpRequest;
+  preRequest?: (req: Request, config?: TConfig) => Request;
   postRequest?: (res: TIn, config?: TConfig) => TOut;
 }): InterceptorApplier<TConfig, TIn, TOut> {
   const initHandler = handlers.init || (() => {});
-  const preRequestHandler = handlers.preRequest || ((req: HttpRequest) => req);
+  const preRequestHandler = handlers.preRequest || ((req: Request) => req);
   const postRequestHandler = handlers.postRequest || ((res: TIn) => res as unknown as TOut);
 
   return function applyInterceptor(
@@ -48,14 +46,11 @@ export function interceptor<TConfig = void, TIn = Promise<HttpResponse>, TOut = 
   };
 }
 
-function defaultHttp(reqInfo: RequestInfo, init?: RequestInit): Promise<HttpResponse> {
-  return fetch(reqInfo, init);
-}
-
 // HTTP client function with .wrap
-export function http<T = Promise<HttpResponse>>(parentClient?: HttpHandler<T>): HttpClient<T> {
+export function http<T = Promise<Response>>(parentClient?: HttpHandler<T>): HttpClient<T> {
   if (!parentClient) {
-    parentClient = defaultHttp as HttpHandler<T>;
+    parentClient = ((reqInfo: RequestInfo, init?: RequestInit) =>
+      fetch(reqInfo, init)) as HttpHandler<T>;
   }
 
   const clientWithWrap = parentClient as HttpClient<T>;
@@ -74,7 +69,7 @@ function isPromise<T>(obj: Promise<T> | object): obj is Promise<T> {
   return obj && 'then' in obj && typeof obj.then === 'function';
 }
 
-export const defaultJsonParser = interceptor<void, Promise<HttpResponse>, Promise<object>>({
+export const defaultJsonParser = interceptor<void, Promise<Response>, Promise<object>>({
   postRequest(res) {
     if (isPromise(res)) {
       return res.then((resp) => {
