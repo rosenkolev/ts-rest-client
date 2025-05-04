@@ -1,0 +1,86 @@
+name: Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  integration:
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+      - name: Install packages
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Spellcheck
+        run: npx -y cspell **/* --no-progress
+      - name: Build
+        run: pnpm run build
+      - name: Lint
+        run: pnpm run lint
+      - name: 🔍 Test
+        run: pnpm run test:ci
+      - name: Coverage as Markdown
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: reports/cobertura-coverage.xml
+          badge: true
+          format: markdown
+          output: both
+      - name: Coverage to summary
+        run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+      - name: Pack
+        run: npm pack
+      - name: Get version
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@v1.3.1
+      - uses: mukunku/tag-exists-action@v1.4.0
+        id: check-tag
+        with:
+          tag: '${{ steps.package-version.outputs.current-version}}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sources
+          path: |
+            dist/
+            package.json
+            README.md
+            LICENSE
+    outputs:
+      TAG: '${{ steps.package-version.outputs.current-version}}'
+      RELEASE_TAG_FREE: ${{ steps.check-tag.outputs.exists == 'false' }}
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && needs.build.outputs.RELEASE_TAG_FREE == 'true'
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: sources
+          path: /
+      - name: Create Release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.build.outputs.TAG }}
+          release_name: ${{ needs.build.outputs.TAG }}
+          draft: false
+          prerelease: false
+      - name: Publish
+        run: |
+          npm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
+          npm publish

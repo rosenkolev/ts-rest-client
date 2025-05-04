@@ -1,0 +1,27 @@
+{
+    "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+    "version": "0.2",
+    "language": "en-US",
+    "overrides": [
+      {
+        "filename": "{*.spec.ts,*.mocks.ts}",
+        "words": []
+      },
+      {
+        "filename": "eslint.config.mjs",
+        "words": ["tseslint"]
+      }
+    ],
+    "ignorePaths": [
+      ".cspell.json",
+      "pnpm-lock.yaml",
+      "coverage/",
+      "reports/",
+      "node_modules/**",
+      "dist/"
+    ],
+    "words": [
+      "Rosen",
+      "Kolev"
+    ]
+  }

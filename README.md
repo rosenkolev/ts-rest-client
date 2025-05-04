@@ -1,3 +1,5 @@
+[![license](https://img.shields.io/github/license/rosenkolev/ts-rest-client.svg)](LICENSE)
+
 # rest-http-client
 
 **Flexible, Type-Safe REST Client Generator for JavaScript & TypeScript**
@@ -36,10 +38,10 @@ const users = api('users', ({ get, post, namespace }) => [
 
   get('all', {
     path: '/',
-    args: {
-      limit: 100,
-      skip: undefined,
-      take: undefined
+    args: { limit: 100 } as {
+      limit?: number;
+      skip?: number;
+      take?: number;
     },
     config: { test: 'Print me in http' }
   }),
@@ -54,9 +56,9 @@ const users = api('users', ({ get, post, namespace }) => [
 
   namespace('students', ({ get, post, put, del }) => [
     post('create', { path: '/' }),
-    get('get', { path: '/:id', args: { id: 0 } }),
+    get('get', { path: '/:id', args: {} as { id: number } }),
     put('update', { path: '/:id' }),
-    del('delete', { path: '/:id', args: { id: 0 } })
+    del('delete', { path: '/:id', args: {} as { id: number } })
   ])
 ]);
 
@@ -64,6 +66,7 @@ users.about();
 users.all({ skip: 0 });
 users.findOne({ id: 42 });
 users.students.get({ id: 5 });
+users.students.update({ id: 5, name: 'Test' });
 users.students.delete({ id: 5 });
 ```
 
@@ -132,6 +135,6 @@ const logger = interceptor({
 const customClient = http().wrap(logger);
 ```
 
-## Credit
+## License
 
-Created by [rosenkolev](https://github.com/rosenkolev)
+[MIT © Rosen Kolev](./LICENSE)
