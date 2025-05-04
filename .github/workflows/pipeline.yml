@@ -67,12 +67,16 @@ jobs:
     name: Publish
     needs: integration
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && needs.build.outputs.RELEASE_TAG_FREE == 'true'
+    if: github.ref == 'refs/heads/main' && needs.integration.outputs.RELEASE_TAG_FREE == 'true'
     steps:
       - uses: actions/download-artifact@v3
         with:
           name: sources
           path: /
+      - name: Publish
+        run: |
+          npm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
+          npm publish
       - name: Create Release
         uses: actions/create-release@latest
         env:
@@ -82,7 +86,3 @@ jobs:
           release_name: ${{ needs.build.outputs.TAG }}
           draft: false
           prerelease: false
-      - name: Publish
-        run: |
-          npm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
-          npm publish
