@@ -13,6 +13,8 @@ permissions:
 
 jobs:
   integration:
+    name: Integration
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -63,7 +65,7 @@ jobs:
       RELEASE_TAG_FREE: ${{ steps.check-tag.outputs.exists == 'false' }}
   publish:
     name: Publish
-    needs: build
+    needs: integration
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && needs.build.outputs.RELEASE_TAG_FREE == 'true'
     steps:
