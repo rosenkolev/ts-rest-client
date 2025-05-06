@@ -9,8 +9,7 @@
     "test:coverage": "npm run test -- --coverage",
     "test:ci": "cross-env CI=true npm run test -- --ci --coverage",
     "test": "jest -c jest.config.ts",
-    "lint": "eslint .",
-    "prepack": "npm run clean"
+    "lint": "eslint ."
   },
   "keywords": [
     "rest",
