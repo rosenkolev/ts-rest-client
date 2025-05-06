@@ -1,4 +1,7 @@
-export type HttpRequestInit = RequestInit & { config?: Record<string, unknown> };
+export type HttpRequestInit = RequestInit & {
+  config?: Record<string, unknown>;
+  data?: object | null;
+};
 export type HttpHandler<T = unknown> = (req: RequestInfo, init?: HttpRequestInit) => T;
 export interface Interceptor<TConfig, TRes, TOut> {
   init?: (config: TConfig) => void;
@@ -21,14 +24,15 @@ export interface HttpClientWrapper<TIn> {
 export type HttpClient<T> = HttpHandler<T> & HttpClientWrapper<T>;
 
 // Interceptor factory
+const defaultRequestHandler = <TIn, TOut>(req: TIn) => req as unknown as TOut;
 export function interceptor<TConfig = void, TIn = Promise<Response>, TOut = TIn>(handlers: {
   init?: (config?: TConfig) => void;
-  preRequest?: (req: Request, config?: TConfig) => Request;
+  preRequest?: (req: Request, config?: TConfig, init?: HttpRequestInit) => Request;
   postRequest?: (res: TIn, config?: TConfig) => TOut;
 }): InterceptorApplier<TConfig, TIn, TOut> {
   const initHandler = handlers.init || (() => {});
-  const preRequestHandler = handlers.preRequest || ((req: Request) => req);
-  const postRequestHandler = handlers.postRequest || ((res: TIn) => res as unknown as TOut);
+  const preRequestHandler = handlers.preRequest || defaultRequestHandler;
+  const postRequestHandler = handlers.postRequest || defaultRequestHandler;
 
   return function applyInterceptor(
     parentClient: HttpHandler<TIn>,
@@ -39,8 +43,8 @@ export function interceptor<TConfig = void, TIn = Promise<Response>, TOut = TIn>
     return function wrappedClient(reqInfo: RequestInfo, init?: HttpRequestInit) {
       let request = reqInfo instanceof Request ? reqInfo : new Request(reqInfo, init);
       const _config = Object.assign({}, config, init?.config);
-      request = preRequestHandler(request, _config);
-      const response = parentClient(request);
+      request = preRequestHandler(request, _config, init);
+      const response = parentClient(request, init);
       return postRequestHandler(response, _config);
     };
   };
@@ -69,7 +73,7 @@ function isPromise<T>(obj: Promise<T> | object): obj is Promise<T> {
   return obj && 'then' in obj && typeof obj.then === 'function';
 }
 
-export const defaultJsonParser = interceptor<void, Promise<Response>, Promise<object>>({
+export const httpJsonParser = interceptor<void, Promise<Response>, Promise<object>>({
   postRequest(res) {
     if (isPromise(res)) {
       return res.then((resp) => {
@@ -81,7 +85,15 @@ export const defaultJsonParser = interceptor<void, Promise<Response>, Promise<ob
   }
 });
 
-export const defaultErrorCode = interceptor<void>({
+export const httpBodySerialize = interceptor<void>({
+  preRequest(req, _, init) {
+    return init && typeof init.data !== 'undefined' && init.data !== null
+      ? new Request(req, { ...init, body: JSON.stringify(init.data) })
+      : req;
+  }
+});
+
+export const httpErrorCode = interceptor<void>({
   postRequest(res) {
     if (isPromise(res)) {
       return res.then((resp) => {
@@ -93,3 +105,5 @@ export const defaultErrorCode = interceptor<void>({
     return res;
   }
 });
+
+http.default = () => http().wrap(httpBodySerialize).wrap(httpErrorCode).wrap(httpJsonParser);

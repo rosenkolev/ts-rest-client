@@ -5,6 +5,7 @@ const api = rest({
 });
 
 type Id<T = number> = { id: T };
+type User = Id & { username: string };
 
 const obj = api('users', ({ get, post, namespace }) => [
   get('about'),
@@ -16,11 +17,13 @@ const obj = api('users', ({ get, post, namespace }) => [
       skip?: number;
       take?: number;
     },
+    response: null as User[],
     config: { test: 'Print me in http' }
   }),
 
   get('findOne', {
-    path: '/:id'
+    path: '/:id',
+    response: (res) => /** zodSchema.parse(res) */ res as User
   }),
 
   post('create', { path: '/:id' }),

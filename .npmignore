@@ -1,4 +1,7 @@
 
 # Ignores TypeScript files, but keeps definitions.
 src/**/*.*
+scripts/**/*.*
+tests/**/*.*
+examples/**/*.*
 !dist/**/*.*

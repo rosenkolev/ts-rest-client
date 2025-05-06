@@ -1,10 +1,11 @@
 {
-  "name": "rest-http-client",
-  "description": "A REST HTTP client",
+  "name": "typed-rest-api-client",
+  "description": "A javascript/typescript library to connect to RESTful APIs",
   "version": "0.1.0",
   "private": false,
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc && node scripts/build.js",
+    "clean": "rimraf dist",
     "test:coverage": "npm run test -- --coverage",
     "test:ci": "cross-env CI=true npm run test -- --ci --coverage",
     "test": "jest -c jest.config.ts",
@@ -18,9 +19,15 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/rosenkolev/ts-rest-client"
+    "url": "https://github.com/rosenkolev/typed-rest-api-client"
   },
-  "main": "dist/index.js",
+  "main": "./dist/index.min.cjs",
+  "module": "./dist/index.min.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "require": "./dist/cjs/index.js",
+    "import": "./dist/esm/index.js"
+  },
   "files": [
     "dist",
     "README.md",
@@ -33,6 +40,7 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^22.15.3",
     "cross-env": "^7.0.3",
+    "esbuild": "0.25.4",
     "eslint": "^9.25.1",
     "eslint-config-prettier": "^10.1.2",
     "eslint-plugin-jest": "^28.11.0",
@@ -42,6 +50,7 @@
     "jest-environment-jsdom": "^29.7.0",
     "jest-silent-reporter": "0.6.0",
     "prettier": "^3.5.3",
+    "rimraf": "^6.0.1",
     "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
     "typescript": "~5.7.3",

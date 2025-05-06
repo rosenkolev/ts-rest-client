@@ -1,4 +1,4 @@
 import { rest, RestOptions } from './rest';
-import { defaultErrorCode, defaultJsonParser, http, interceptor } from './client';
+import { http, httpBodySerialize, httpErrorCode, httpJsonParser, interceptor } from './client';
 
-export { rest, RestOptions, defaultErrorCode, defaultJsonParser, http, interceptor };
+export { rest, RestOptions, http, httpBodySerialize, httpJsonParser, httpErrorCode, interceptor };

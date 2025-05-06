@@ -4,7 +4,7 @@ import { createJsWithTsPreset } from 'ts-jest';
 const CI = !!process.env.CI;
 
 export default {
-  displayName: 'rest-http-client',
+  displayName: 'typed-rest-api-client',
   ...createJsWithTsPreset({
     tsconfig: 'tsconfig.spec.json'
   }),

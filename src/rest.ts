@@ -1,28 +1,37 @@
 import type { HttpHandler, HttpRequestInit } from './client';
-import { http, defaultErrorCode, defaultJsonParser } from './client';
+import { http } from './client';
 
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 type HttpArgs = Record<string, string | number | boolean>;
 
-export interface RestOptions {
+export interface RestOptions<THttpRes> {
   baseUrl: string;
-  http: HttpHandler<object>;
+  http: HttpHandler<THttpRes>;
   parseArgs: (args: Record<string, string | number | boolean>) => string;
-  parseBody: (data: unknown, config?: Record<string, unknown>) => string;
   substituteRootParams: (path: string, args: Record<string, string | number | boolean>) => string;
 }
 
-export interface RestMethodMemberDef<TArgs = Record<string, string | number | boolean>> {
+export interface RestMethodMemberDef<
+  TArgs = Record<string, string | number | boolean>,
+  TRes = unknown
+> {
   path: string;
   args?: TArgs;
+  response?: TRes | ((res: object) => TRes);
   config?: Record<string, unknown>;
 }
 
-export interface RestMemberDef<TArgs = Record<string, string | number | boolean>>
-  extends RestMethodMemberDef<TArgs> {
+export interface RestMemberDef<TArgs = Record<string, string | number | boolean>, TRes = unknown>
+  extends RestMethodMemberDef<TArgs, TRes> {
   name: string;
   method: HttpMethod;
 }
+
+type InferResponse<T> = T extends { response: infer R }
+  ? R extends (...args: unknown[]) => infer U
+    ? U
+    : R
+  : never;
 
 export interface RestNamespaceDef {
   name: string;
@@ -36,14 +45,14 @@ export type RestMethodFn<TArgs extends HttpArgs, TRes = unknown> = (
   config?: HttpRequestInit
 ) => TRes;
 
-type MapMember<M extends RestMember> = M extends RestNamespaceDef
-  ? { [K in M['name']]: InferRest<M['children']> }
+type MapMember<M extends RestMember, THttpRes> = M extends RestNamespaceDef
+  ? { [K in M['name']]: InferRest<M['children'], THttpRes> }
   : M extends RestMemberDef
-    ? { [K in M['name']]: RestMethodFn<NonNullable<M['args']>> }
+    ? { [K in M['name']]: RestMethodFn<NonNullable<M['args']>, THttpRes> }
     : never;
 
-type MapMembers<T extends readonly RestMember[]> = {
-  [K in keyof T]: T[K] extends RestMember ? MapMember<T[K]> : never;
+type MapMembers<T extends readonly RestMember[], THttpRes> = {
+  [K in keyof T]: T[K] extends RestMember ? MapMember<T[K], THttpRes> : never;
 }[number]; // Union of mapped members
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -51,7 +60,9 @@ type MergeUnion<U> = (U extends any ? (k: U) => void : never) extends (k: infer 
   ? { [K in keyof I]: I[K] }
   : never;
 
-export type InferRest<T extends readonly RestMember[]> = MergeUnion<MapMembers<T>>;
+export type InferRest<T extends readonly RestMember[], THttpRes> = MergeUnion<
+  MapMembers<T, THttpRes>
+>;
 
 // Functions
 
@@ -98,7 +109,7 @@ function urlJoin(base: string, path: string) {
 function buildFromMembers(
   basePath: string,
   members: Readonly<RestMember[]>,
-  options: RestOptions
+  options: RestOptions<unknown>
 ): Record<string, object> {
   const obj: Record<string, object> = {};
 
@@ -128,10 +139,6 @@ function buildFromMembers(
           config: finalConfig
         };
 
-        if (member.method !== 'GET') {
-          fetchInit.body = options.parseBody(finalArgs, finalConfig);
-        }
-
         return options.http(finalUrl, fetchInit);
       };
     }
@@ -146,12 +153,11 @@ function defaultParseQuery(args: Record<string, string | number | boolean>) {
     .join('&');
 }
 
-export function rest(restOptions: Partial<RestOptions>) {
-  const opts: RestOptions = {
+export function rest<THttpRes = Promise<object>>(restOptions: Partial<RestOptions<THttpRes>>) {
+  const opts: RestOptions<unknown> = {
     baseUrl: restOptions.baseUrl ?? document.baseURI ?? '/',
-    http: restOptions.http ?? http().wrap(defaultErrorCode).wrap(defaultJsonParser),
+    http: restOptions.http ?? http.default(),
     parseArgs: restOptions.parseArgs ?? defaultParseQuery,
-    parseBody: restOptions.parseBody ?? ((data) => JSON.stringify(data)),
     substituteRootParams:
       restOptions.substituteRootParams ??
       ((path, args) => path.replace(/:([^/]+)/g, (_, key: string) => encodeURIComponent(args[key])))
@@ -160,8 +166,8 @@ export function rest(restOptions: Partial<RestOptions>) {
   return <T extends readonly RestMember[]>(
     path: string,
     define: (fn: typeof createFunctions) => T
-  ): InferRest<T> => {
+  ): InferRest<T, THttpRes> => {
     const members = define(createFunctions);
-    return buildFromMembers(urlJoin(opts.baseUrl, path), members, opts) as InferRest<T>;
+    return buildFromMembers(urlJoin(opts.baseUrl, path), members, opts) as InferRest<T, THttpRes>;
   };
 }

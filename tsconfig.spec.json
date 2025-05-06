@@ -2,6 +2,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "esModuleInterop": true,
     "outDir": "./dist/test-out",
     "types": ["jest"]
   },
