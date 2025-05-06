@@ -81,7 +81,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ needs.build.outputs.TAG }}
-          release_name: ${{ needs.build.outputs.TAG }}
+          tag_name: ${{ needs.integration.outputs.TAG }}
+          release_name: ${{ needs.integration.outputs.TAG }}
           draft: false
           prerelease: false
