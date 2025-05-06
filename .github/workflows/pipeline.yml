@@ -105,6 +105,7 @@ jobs:
       - name: Install packages
         run: |
           cd tests/${{matrix.test}}
+          pnpm upgrade -D typed-rest-api-client
           pnpm install --frozen-lockfile --prefer-offline
       - name: Test
         run: pnpm test
