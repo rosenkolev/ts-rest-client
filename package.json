@@ -1,7 +1,7 @@
 {
   "name": "typed-rest-api-client",
   "description": "A javascript/typescript library to connect to RESTful APIs",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "scripts": {
     "build": "tsc && node scripts/build.js",
@@ -9,7 +9,8 @@
     "test:coverage": "npm run test -- --coverage",
     "test:ci": "cross-env CI=true npm run test -- --ci --coverage",
     "test": "jest -c jest.config.ts",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "prepack": "npm run clean"
   },
   "keywords": [
     "rest",
