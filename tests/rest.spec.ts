@@ -19,6 +19,10 @@ describe('rest client generator - extended tests', () => {
       args: { x: 1 },
       config: { secure: true }
     }),
+    r.get('withSchema', {
+      path: '/schema',
+      schema: (obj: object) => ({ ...obj, _test: 1 })
+    }),
     r.patch('updateUser', {
       path: '/users/:id',
       args: { id: 1, name: 'test' }
@@ -47,14 +51,22 @@ describe('rest client generator - extended tests', () => {
     );
   });
 
+  it('should return value', async () => {
+    mockHttp.mockReturnValue('Result');
+    const data = await api.withConfig();
+
+    expect(data).toBe('Result');
+  });
+
   it('should handle PATCH method and JSON body', () => {
-    api.updateUser({ id: 12, name: 'Bob' });
+    const data = { id: 12, name: 'Bob' };
+    api.updateUser(data);
 
     expect(mockHttp).toHaveBeenCalledWith(
       `${baseUrl}/v1/users/12`,
       expect.objectContaining({
         method: 'PATCH',
-        body: JSON.stringify({ id: 12, name: 'Bob' })
+        data: data
       })
     );
   });
@@ -71,13 +83,14 @@ describe('rest client generator - extended tests', () => {
   });
 
   it('should support nested namespace PUT method', () => {
-    api.group.rename({ id: 7, newName: 'Avengers' });
+    const data = { id: 7, newName: 'Avengers' };
+    api.group.rename(data);
 
     expect(mockHttp).toHaveBeenCalledWith(
       `${baseUrl}/v1/group/rename/7`,
       expect.objectContaining({
         method: 'PUT',
-        body: JSON.stringify({ id: 7, newName: 'Avengers' })
+        data: data
       })
     );
   });
@@ -119,5 +132,14 @@ describe('rest client generator - extended tests', () => {
         })
       })
     );
+  });
+
+  it('should handle schema transform', async () => {
+    mockHttp.mockResolvedValue({ a: 83 });
+    const res = await api.withSchema();
+    expect(res).toEqual({
+      a: 83,
+      _test: 1
+    });
   });
 });

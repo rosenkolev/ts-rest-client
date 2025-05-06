@@ -17,13 +17,13 @@ const obj = api('users', ({ get, post, namespace }) => [
       skip?: number;
       take?: number;
     },
-    response: null as User[],
+    schema: null! as User[] | null,
     config: { test: 'Print me in http' }
   }),
 
   get('findOne', {
     path: '/:id',
-    response: (res) => /** zodSchema.parse(res) */ res as User
+    schema: (res) => /** zodSchema.parse(res) */ res as User
   }),
 
   post('create', { path: '/:id' }),
@@ -37,13 +37,13 @@ const obj = api('users', ({ get, post, namespace }) => [
   ])
 ]);
 
-obj.all({
+const allUSers = await obj.all({
   skip: 0
 });
 
-obj.about();
-
-obj.findOne({ test: 'A' });
+const a = await obj.about();
+const b = await obj.create({});
+const one = await obj.findOne({ test: 'A' });
 
 obj.students.get({ id: 5 });
 obj.students.delete({ id: 5 });

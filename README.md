@@ -3,7 +3,7 @@
 [![npm latest version](https://img.shields.io/npm/v/typed-rest-api-client/latest?logo=npm)](https://www.npmjs.com/package/typed-rest-api-client)
 [![npm bundle size](https://img.shields.io/bundlephobia/minzip/typed-rest-api-client?label=npm%20-%20minzipped&logo=npm)](https://www.npmjs.com/package/typed-rest-api-client)
 [![npm license](https://img.shields.io/npm/l/typed-rest-api-client)](https://github.com/rosenkolev/typed-rest-api-client/blob/master)
-[![build](https://github.com/typed-rest-api-client/workflows/pipeline/badge.svg)](https://github.com/rosenkolev/typed-rest-api-client/actions?query=workflow%3Apipeline)
+[![Pipeline](https://github.com/rosenkolev/typed-rest-api-client/actions/workflows/pipeline.yml/badge.svg)](https://github.com/rosenkolev/typed-rest-api-client/actions/workflows/pipeline.yml)
 
 **Flexible, Type-Safe REST Client Generator for JavaScript & TypeScript**
 
@@ -48,7 +48,7 @@ const users = api('users', ({ get, post, namespace }) => [
       skip?: number;
       take?: number;
     },
-    response: null as { name: string }[],
+    schema: null! as { name: string }[],
     config: { test: 'Print me in http' }
   }),
 
@@ -95,7 +95,7 @@ const client = http((reqInfo, init) => fetch(reqInfo, init));
 ### Built-in interceptors:
 
 ```typescript
-import { http, defaultJsonParser, defaultErrorCode } from 'typed-rest-api-client';
+import { http, httpBodySerialize, httpErrorCode, httpJsonParser } from 'typed-rest-api-client';
 
 const client = http.default();
 
@@ -156,7 +156,7 @@ const api = rest({
 class RestClient {
   readonly #http = inject(HttpClient);
   readonly #api = rest({
-    http: (reqInfo, init) => this.#http(reqInfo as string, init.data)
+    http: (reqInfo, init) => firstValueFrom(this.#http(reqInfo as string, init.data))
   });
 }
 ```
@@ -174,7 +174,7 @@ const User = z.object({
 
 const users = rest()('users', ({ get  }) => [
   get('all', {
-    response: (res) => User.parse(res)
+    schema: (res) => User.parse(res)
   })
 ]);
 
@@ -191,7 +191,6 @@ const allUsers = await users.all(); // zod parse is applied
 - `baseUrl: string`
 - `http?: HttpHandler<object>`
 - `parseArgs?: (args: Record<string, string | number | boolean>) => string`
-- ` parseBody?: (data: unknown) => string`
 - `substituteRootParams?: (path: string, args: Record<string, string | number | boolean>) => string`
 
 **Creates a namespaced REST client:**

@@ -1,16 +1,20 @@
-import { http, interceptor, defaultJsonParser, defaultErrorCode } from '../src';
+import { http, interceptor, httpErrorCode, httpJsonParser, httpBodySerialize } from '../src';
 
 const _global: Record<string, unknown> = global || globalThis || window || {};
 if (!('Request' in _global)) {
   _global.Request = class FakeRequest {
-    constructor(readonly url: string) {}
+    readonly text = () => Promise.resolve(this.init.body);
+    constructor(
+      readonly url: string,
+      readonly init: { readonly body: string }
+    ) {}
   };
 
   _global.Response = class FakeResponse {
     status: number;
     statusText: string;
-    readonly text = () => this._body;
-    readonly json = () => (this._body ? JSON.parse(this._body) : {});
+    readonly text = () => Promise.resolve(this._body);
+    readonly json = () => Promise.resolve(this._body ? JSON.parse(this._body) : {});
 
     constructor(
       readonly _body: string | null,
@@ -112,23 +116,35 @@ describe('http client', () => {
   });
 
   describe('integrated interceptors', () => {
-    it('defaultJsonParser should parse JSON from response', async () => {
+    it('httpJsonParser should parse JSON from response', async () => {
       const jsonData = { hello: 'world' };
       const res = new Response(JSON.stringify(jsonData), {
         headers: { 'Content-Type': 'application/json' }
       });
 
-      const client = http(() => Promise.resolve(res)).wrap(defaultJsonParser);
+      const client = http(() => Promise.resolve(res)).wrap(httpJsonParser);
       const result = await client('/');
 
       expect(result).toEqual(jsonData);
     });
 
-    it('defaultErrorCode should throw on HTTP error status', async () => {
+    it('httpErrorCode should throw on HTTP error status', async () => {
       const res = new Response('Bad Request', { status: 400, statusText: 'Bad Request' });
-      const client = http(() => Promise.resolve(res)).wrap(defaultErrorCode);
+      const client = http(() => Promise.resolve(res)).wrap(httpErrorCode);
 
       await expect(client('/')).rejects.toThrow('Bad Request');
+    });
+
+    it('httpBodySerialize should parse body', async () => {
+      let resBody = Promise.resolve('');
+      const client = http((req) => {
+        resBody = (req as Request).text();
+        return Promise.resolve(new Response());
+      }).wrap(httpBodySerialize);
+
+      client('/test', { data: { a: 174 } });
+
+      expect(await resBody).toBe('{"a":174}');
     });
   });
 
