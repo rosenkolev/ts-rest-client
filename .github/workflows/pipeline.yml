@@ -86,12 +86,13 @@ jobs:
           draft: false
           prerelease: false
   verify:
+    name: Verify
     needs: 
       - integration
       - publish
     strategy:
       matrix:
-        test: ['node-cjs-tests', 'node-cjs-tests']
+        test: ['node-cjs-tests', 'node-esm-tests']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -102,10 +103,9 @@ jobs:
         with:
           node-version: 22
           cache: 'pnpm'
-      - name: Install packages
+      - name: Test
         run: |
           cd tests/${{matrix.test}}
           pnpm upgrade -D typed-rest-api-client
           pnpm install --frozen-lockfile --prefer-offline
-      - name: Test
-        run: pnpm test
+          pnpm test
