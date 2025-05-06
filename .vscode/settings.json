@@ -39,9 +39,9 @@
     "*.ts": "typescript"
   },
   "eslint.enable": true,
-  "jest.autoRun": {
-    "watch": false,
-    "onSave": "test-file",
-    "onStartup": ["all-tests"],
+  "jest.runMode": {
+    "runAllTestsOnStartup": true,
+    "testFileOnly": true,
+    "type": "on-save"
   }
 }

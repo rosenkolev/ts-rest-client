@@ -8,6 +8,6 @@
   },
   "include": [
     "jest.config.ts",
-    "tests/**/*.spec.ts"
+    "tests/unit-tests/**/*.spec.ts"
   ]
 }

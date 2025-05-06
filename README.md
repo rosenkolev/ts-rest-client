@@ -1,8 +1,7 @@
 # typed-rest-api-client [beta-release]
 
 [![npm latest version](https://img.shields.io/npm/v/typed-rest-api-client/latest?logo=npm)](https://www.npmjs.com/package/typed-rest-api-client)
-[![npm bundle size](https://img.shields.io/bundlephobia/minzip/typed-rest-api-client?label=npm%20-%20minzipped&logo=npm)](https://www.npmjs.com/package/typed-rest-api-client)
-[![npm license](https://img.shields.io/npm/l/typed-rest-api-client)](https://github.com/rosenkolev/typed-rest-api-client/blob/master)
+[![NPM License](https://img.shields.io/npm/l/typed-rest-api-client)](https://github.com/rosenkolev/typed-rest-api-client)
 [![Pipeline](https://github.com/rosenkolev/typed-rest-api-client/actions/workflows/pipeline.yml/badge.svg)](https://github.com/rosenkolev/typed-rest-api-client/actions/workflows/pipeline.yml)
 
 **Flexible, Type-Safe REST Client Generator for JavaScript & TypeScript**

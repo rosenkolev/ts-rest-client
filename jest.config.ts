@@ -8,6 +8,9 @@ export default {
   ...createJsWithTsPreset({
     tsconfig: 'tsconfig.spec.json'
   }),
+
+  modulePathIgnorePatterns: ['<rootDir>/tests/node-cjs-tests', '<rootDir>/tests/node-esm-tests'],
+
   // The test environment that will be used for testing
   testEnvironment: 'jsdom',
 

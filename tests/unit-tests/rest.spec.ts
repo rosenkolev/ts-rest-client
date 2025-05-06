@@ -1,4 +1,4 @@
-import { rest } from '../src';
+import { rest } from '../../src';
 
 describe('rest client generator - extended tests', () => {
   const mockHttp = jest.fn();

@@ -1,4 +1,4 @@
-import { http, interceptor, httpErrorCode, httpJsonParser, httpBodySerialize } from '../src';
+import { http, interceptor, httpErrorCode, httpJsonParser, httpBodySerialize } from '../../src';
 
 const _global: Record<string, unknown> = global || globalThis || window || {};
 if (!('Request' in _global)) {
