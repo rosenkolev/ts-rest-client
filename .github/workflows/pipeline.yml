@@ -45,7 +45,7 @@ jobs:
         run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
       - name: Get coverage output
         id: coverage
-        run: echo "value=$(node -e "const fs = require('node:fs'), x = JSON.parse(fs.readFileSync('reports/coverage-summary.json')); console.log(Math.min(x.total.lines.pct, x.total.statements.pct, x.total.branches.pct));")"
+        run: echo "value=$(node -e "const fs = require('node:fs'), x = JSON.parse(fs.readFileSync('reports/coverage-summary.json')); console.log(Math.min(x.total.lines.pct, x.total.statements.pct, x.total.branches.pct));")" >> "$GITHUB_OUTPUT"
       - name: Coverage to badge
         uses: schneegans/dynamic-badges-action@v1.7.0
         with:
