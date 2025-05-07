@@ -22,7 +22,7 @@ export default {
   clearMocks: true,
 
   // In the CI/CD server we output lcov and cobertura coverage report.
-  coverageReporters: CI ? ['text-summary', 'lcovonly', 'cobertura'] : ['text'],
+  coverageReporters: CI ? ['text-summary', 'json-summary', 'lcovonly', 'cobertura'] : ['text'],
   coverageDirectory: './reports',
 
   // Indicates which provider should be used to instrument code for coverage

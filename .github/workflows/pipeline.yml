@@ -43,6 +43,20 @@ jobs:
           output: both
       - name: Coverage to summary
         run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+      - name: Get coverage output
+        id: coverage
+        run: echo "value=$(node -e "const fs = require('node:fs'), x = JSON.parse(fs.readFileSync('reports/coverage-summary.json')); console.log(Math.min(x.total.lines.pct, x.total.statements.pct, x.total.branches.pct));")"
+      - name: Coverage to badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: 03ba5cb1f9f017852a3d910a8df02fc4
+          filename: typed-rest-api-client.svg
+          label: Test Coverage
+          ${{ steps.coverage.outputs.value }}
+          color: green
+          namedLogo: jest
+          forceUpdate: true
       - name: Pack
         run: npm pack
       - name: Get version
