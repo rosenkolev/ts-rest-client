@@ -1,8 +1,13 @@
-export type HttpRequestInit = RequestInit & {
-  config?: Record<string, unknown>;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export type HttpRequestInit<TConfig = {}> = RequestInit & {
+  config?: TConfig;
   data?: object | null;
 };
-export type HttpHandler<T = unknown> = (req: RequestInfo, init?: HttpRequestInit) => T;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export type HttpHandler<T = Promise<object>, TConfig = {}> = (
+  req: RequestInfo,
+  init?: HttpRequestInit<TConfig>
+) => T;
 export interface Interceptor<TConfig, TRes, TOut> {
   init?: (config: TConfig) => void;
   preRequest?: (request: Request, config: TConfig) => Request;
@@ -11,59 +16,67 @@ export interface Interceptor<TConfig, TRes, TOut> {
 
 export type InterceptorApplier<TConfig, TIn, TOut> = (
   parent: HttpHandler<TIn>,
-  config?: TConfig
-) => HttpHandler<TOut>;
+  config?: Partial<TConfig>
+) => HttpHandler<TOut, TConfig>;
 
-export interface HttpClientWrapper<TIn> {
+export interface HttpClientWrapper<TIn, PConfig> {
   wrap<TConfig, TOut>(
     interceptor: InterceptorApplier<TConfig, TIn, TOut>,
-    config?: TConfig
-  ): HttpClient<TOut>;
+    config?: Partial<TConfig>
+  ): HttpClient<TOut, PConfig | TConfig>;
 }
 
-export type HttpClient<T> = HttpHandler<T> & HttpClientWrapper<T>;
+export type HttpClient<T, TConfig> = HttpHandler<T, TConfig> & HttpClientWrapper<T, TConfig>;
 
 // Interceptor factory
 const defaultRequestHandler = <TIn, TOut>(req: TIn) => req as unknown as TOut;
-export function interceptor<TConfig = void, TIn = Promise<Response>, TOut = TIn>(handlers: {
-  init?: (config?: TConfig) => void;
-  preRequest?: (req: Request, config?: TConfig, init?: HttpRequestInit) => Request;
-  postRequest?: (res: TIn, config?: TConfig) => TOut;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export function interceptor<TConfig = {}, TIn = Promise<Response>, TOut = TIn>(handlers: {
+  init?: (config: TConfig) => TConfig;
+  preRequest?: (req: Request, config: TConfig, init?: HttpRequestInit<TConfig>) => Request;
+  postRequest?: (res: TIn, config: TConfig) => TOut;
+  defaultConfig?: TConfig;
 }): InterceptorApplier<TConfig, TIn, TOut> {
-  const initHandler = handlers.init || (() => {});
+  const initHandler = handlers.init || defaultRequestHandler;
   const preRequestHandler = handlers.preRequest || defaultRequestHandler;
   const postRequestHandler = handlers.postRequest || defaultRequestHandler;
 
   return function applyInterceptor(
     parentClient: HttpHandler<TIn>,
-    config?: TConfig
-  ): HttpHandler<TOut> {
-    initHandler(config);
+    config?: Partial<TConfig>
+  ): HttpHandler<TOut, TConfig> {
+    config = initHandler({ ...handlers.defaultConfig, ...config } as TConfig);
 
-    return function wrappedClient(reqInfo: RequestInfo, init?: HttpRequestInit) {
+    return function wrappedClient(reqInfo: RequestInfo, init?: HttpRequestInit<TConfig>) {
       let request = reqInfo instanceof Request ? reqInfo : new Request(reqInfo, init);
-      const _config = Object.assign({}, config, init?.config);
+      const _config = Object.assign({}, config, init?.config) as TConfig;
       request = preRequestHandler(request, _config, init);
-      const response = parentClient(request, init);
+      const response = parentClient(request, init as HttpRequestInit<object>);
       return postRequestHandler(response, _config);
     };
   };
 }
 
 // HTTP client function with .wrap
-export function http<T = Promise<Response>>(parentClient?: HttpHandler<T>): HttpClient<T> {
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export function http<T = Promise<Response>, C = {}>(
+  parentClient?: HttpHandler<T, C>
+): HttpClient<T, C> {
   if (!parentClient) {
     parentClient = ((reqInfo: RequestInfo, init?: RequestInit) =>
-      fetch(reqInfo, init)) as HttpHandler<T>;
+      fetch(reqInfo, init)) as HttpHandler<T, C>;
   }
 
-  const clientWithWrap = parentClient as HttpClient<T>;
+  const clientWithWrap = parentClient as HttpClient<T, C>;
 
   clientWithWrap.wrap = function wrap<TConfig, TRes>(
     interceptorFn: InterceptorApplier<TConfig, T, TRes>,
-    config?: TConfig
+    config?: Partial<TConfig>
   ) {
-    return http(interceptorFn(parentClient, config));
+    return http(interceptorFn(parentClient as HttpHandler<T>, config)) as HttpClient<
+      TRes,
+      C | TConfig
+    >;
   };
 
   return clientWithWrap;
@@ -73,36 +86,45 @@ function isPromise<T>(obj: Promise<T> | object): obj is Promise<T> {
   return obj && 'then' in obj && typeof obj.then === 'function';
 }
 
-export const httpJsonParser = interceptor<void, Promise<Response>, Promise<object>>({
-  postRequest(res) {
-    if (isPromise(res)) {
-      return res.then((resp) => {
-        return resp.json();
+export const httpBodySerialize = interceptor<{ appendContentType: boolean }>({
+  preRequest(req, config, init) {
+    if (init && typeof init.data !== 'undefined' && init.data !== null) {
+      return new Request(req, {
+        ...init,
+        body: JSON.stringify(init.data),
+        headers:
+          config.appendContentType === true
+            ? { ...(init.headers ?? {}), 'Content-Type': 'application/json' }
+            : init.headers
       });
     }
 
-    return res;
+    return req;
+  },
+  defaultConfig: {
+    appendContentType: true
   }
 });
 
-export const httpBodySerialize = interceptor<void>({
-  preRequest(req, _, init) {
-    return init && typeof init.data !== 'undefined' && init.data !== null
-      ? new Request(req, { ...init, body: JSON.stringify(init.data) })
-      : req;
+export const httpJsonParser = interceptor({
+  postRequest(res: Promise<Response>) {
+    return isPromise(res) ? res.then((resp) => resp.json()) : res;
   }
 });
 
-export const httpErrorCode = interceptor<void>({
-  postRequest(res) {
+export const httpErrorCode = interceptor<{ errorCode: number }>({
+  postRequest(res, config) {
     if (isPromise(res)) {
       return res.then((resp) => {
-        if (resp.status >= 400) throw new Error(resp.statusText);
+        if (resp.status >= config.errorCode) throw new Error(resp.statusText);
         return resp;
       });
     }
 
     return res;
+  },
+  defaultConfig: {
+    errorCode: 400
   }
 });
 

@@ -8,7 +8,7 @@ type Id<T = number> = { id: T };
 type User = Id & { username: string };
 
 const obj = api('users', ({ get, post, namespace }) => [
-  get('about'),
+  get('about', { config: { errorCode: 400 } }),
 
   get('all', {
     path: '/',
@@ -41,7 +41,12 @@ const allUSers = await obj.all({
   skip: 0
 });
 
-const a = await obj.about();
+const a = await obj.about(null, {
+  config: {
+    errorCode: 401
+  }
+});
+
 const b = await obj.create({});
 const one = await obj.findOne({ test: 'A' });
 

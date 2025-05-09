@@ -3,69 +3,107 @@ import { http } from './client';
 
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 type HttpArgs = Record<string, string | number | boolean>;
+type HttpDefaultClient = ReturnType<typeof http.default>;
+type InferHttpHandlerConfig<T> = T extends HttpHandler<_Blob, infer C> ? C : never;
 
-export interface RestOptions {
+export interface RestOptions<THandler extends HttpHandler<Promise<object>, object>> {
   baseUrl: string;
-  http: HttpHandler<Promise<object>>;
+  http: THandler;
   parseArgs: (args: Record<string, string | number | boolean>) => string;
   substituteRootParams: (path: string, args: Record<string, string | number | boolean>) => string;
 }
 
 export type RestSchema<T> = ((res: object) => T) | T;
+export interface RestMemberBase<N extends string, M extends HttpMethod> {
+  name: N;
+  method: M;
+}
+
 export interface RestMethodMemberDef<
   TArgs = Record<string, string | number | boolean>,
-  TRes = unknown
+  TRes = unknown,
+  TConfig = Record<string, unknown>
 > {
   path: string;
   args?: TArgs;
   schema?: RestSchema<TRes>;
-  config?: Record<string, unknown>;
+  config?: TConfig;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DefaultHttpResult = any;
-export interface RestMemberDef<
+type _RestMember<
   TArgs = Record<string, string | number | boolean>,
   TRes = DefaultHttpResult
-> extends RestMethodMemberDef<TArgs, TRes> {
-  name: string;
-  method: HttpMethod;
+> = RestMethodMemberDef<TArgs, TRes> & RestMemberBase<string, HttpMethod>;
+
+export type RestMethodMemberCreator<TConfig, TMethod extends HttpMethod> = <
+  TName extends string,
+  TArgs = HttpArgs,
+  TRes = object
+>(
+  name: TName,
+  opts?: Partial<RestMethodMemberDef<TArgs, TRes, TConfig>>
+) => RestMethodMemberDef<TArgs, TRes, TConfig> & { name: TName; method: TMethod };
+
+export interface RestCreateFunctions<TConfig> {
+  member<TName extends string, TMethod extends HttpMethod, TArgs = HttpArgs, TRes = object>(
+    name: TName,
+    method: TMethod,
+    opts?: RestMethodMemberDef<TArgs, TRes, TConfig>
+  ): RestMethodMemberDef<TArgs, TRes, TConfig> & { name: TName; method: TMethod };
+
+  readonly get: RestMethodMemberCreator<TConfig, 'GET'>;
+  readonly post: RestMethodMemberCreator<TConfig, 'POST'>;
+  readonly patch: RestMethodMemberCreator<TConfig, 'PATCH'>;
+  readonly put: RestMethodMemberCreator<TConfig, 'PUT'>;
+  readonly del: RestMethodMemberCreator<TConfig, 'DELETE'>;
+  readonly namespace: <TName extends string, TRest extends RestMember[]>(
+    name: TName,
+    createChildren: (fn: RestCreateFunctions<TConfig>) => TRest
+  ) => {
+    name: TName;
+    children: TRest;
+  };
 }
 
 type InferRestRes<T> = T extends RestSchema<infer R> ? R : never;
 
-export interface RestNamespaceDef {
+interface _RestNamespace {
   name: string;
   children: RestMember[];
 }
 
-type RestMember = RestMemberDef | RestNamespaceDef;
+type RestMember = _RestMember | _RestNamespace;
 
-export type RestMethodFn<TArgs extends HttpArgs, TRes = unknown> = (
-  args?: TArgs,
-  config?: HttpRequestInit
+export type RestMethodFn<TConfig, TArgs extends HttpArgs, TRes = unknown> = (
+  args?: TArgs | null,
+  config?: HttpRequestInit<TConfig>
 ) => TRes;
 
-type MapMember<M extends RestMember> = M extends RestNamespaceDef
-  ? { [K in M['name']]: InferRest<M['children']> }
-  : M extends RestMemberDef
+type MapMember<M extends RestMember, TConfig> = M extends _RestNamespace
+  ? { [K in M['name']]: InferRest<M['children'], TConfig> }
+  : M extends _RestMember
     ? {
         [K in M['name']]: RestMethodFn<
+          TConfig,
           NonNullable<M['args']>,
           Promise<InferRestRes<NonNullable<M['schema']>>>
         >;
       }
     : never;
 
-type MapMembers<T extends readonly RestMember[]> = {
-  [K in keyof T]: T[K] extends RestMember ? MapMember<T[K]> : never;
+type MapMembers<T extends readonly RestMember[], TConfig> = {
+  [K in keyof T]: T[K] extends RestMember ? MapMember<T[K], TConfig> : never;
 }[number]; // Union of mapped members
 
 type MergeUnion<U> = (U extends unknown ? (k: U) => void : never) extends (k: infer I) => void
   ? { [K in keyof I]: I[K] }
   : never;
 
-export type InferRest<T extends readonly RestMember[]> = MergeUnion<MapMembers<T>>;
+export type InferRest<T extends readonly RestMember[], TConfig> = MergeUnion<
+  MapMembers<T, TConfig>
+>;
 
 // Functions
 
@@ -110,11 +148,15 @@ function urlJoin(base: string, path: string) {
   return base + path;
 }
 
+function isNone<T>(obj: T | null | undefined): obj is null | undefined {
+  return obj === null || typeof obj === 'undefined';
+}
+
 // 🔧 Recursive function builder
 function buildFromMembers(
   basePath: string,
   members: Readonly<RestMember[]>,
-  options: RestOptions
+  options: RestOptions<HttpHandler<Promise<object>, object>>
 ): Record<string, object> {
   const obj: Record<string, object> = {};
 
@@ -123,16 +165,17 @@ function buildFromMembers(
       obj[member.name] = buildFromMembers(urlJoin(basePath, member.name), member.children, options);
     } else {
       obj[member.name] = (
-        args: Record<string, string | number | boolean> = {},
-        init: HttpRequestInit = {}
+        args?: Record<string, string | number | boolean> | null,
+        init: HttpRequestInit<object> = {}
       ) => {
+        const noArgs = isNone(args) && isNone(member.args);
+        const finalArgs = noArgs ? {} : { ...(member.args || {}), ...(args || {}) };
         const noBody = member.method === 'GET' || member.method === 'DELETE';
-        const finalArgs = { ...(member.args || {}), ...args };
         const urlPath = options.substituteRootParams(urlJoin(basePath, member.path), finalArgs);
         const finalConfig = { ...(member.config || {}), ...(init.config || {}) };
-        const finalUrl = noBody ? `${urlPath}?${options.parseArgs(finalArgs)}` : urlPath;
-        const data = noBody ? null : finalArgs;
-        const fetchInit: HttpRequestInit = {
+        const finalUrl = noArgs || !noBody ? urlPath : `${urlPath}?${options.parseArgs(finalArgs)}`;
+        const data = noBody || noArgs ? null : finalArgs;
+        const fetchInit: HttpRequestInit<object> = {
           ...init,
           method: member.method,
           headers: {
@@ -160,21 +203,31 @@ function defaultParseQuery(args: Record<string, string | number | boolean>) {
     .join('&');
 }
 
-export function rest(restOptions: Partial<RestOptions>) {
-  const opts: RestOptions = {
+export function rest<THandler extends HttpHandler<Promise<object>, object> = HttpDefaultClient>(
+  restOptions?: Partial<RestOptions<THandler>>
+) {
+  if (typeof restOptions === 'undefined' || restOptions === null) {
+    restOptions = {};
+  }
+
+  const opts: RestOptions<THandler> = {
     baseUrl: restOptions.baseUrl ?? document.baseURI ?? '/',
-    http: restOptions.http ?? http.default(),
+    http: (restOptions.http ?? http.default()) as THandler,
     parseArgs: restOptions.parseArgs ?? defaultParseQuery,
     substituteRootParams:
       restOptions.substituteRootParams ??
       ((path, args) => path.replace(/:([^/]+)/g, (_, key: string) => encodeURIComponent(args[key])))
   };
 
+  const restCreators = createFunctions as RestCreateFunctions<InferHttpHandlerConfig<THandler>>;
   return <T extends readonly RestMember[]>(
     path: string,
-    define: (fn: typeof createFunctions) => T
-  ): InferRest<T> => {
-    const members = define(createFunctions);
-    return buildFromMembers(urlJoin(opts.baseUrl, path), members, opts) as InferRest<T>;
+    define: (fn: RestCreateFunctions<InferHttpHandlerConfig<THandler>>) => T
+  ) => {
+    const members = define(restCreators);
+    return buildFromMembers(urlJoin(opts.baseUrl, path), members, opts) as InferRest<
+      T,
+      InferHttpHandlerConfig<THandler>
+    >;
   };
 }

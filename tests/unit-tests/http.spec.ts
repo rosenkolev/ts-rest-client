@@ -1,33 +1,5 @@
 import { http, interceptor, httpErrorCode, httpJsonParser, httpBodySerialize } from '../../src';
-
-const _global: Record<string, unknown> = global || globalThis || window || {};
-if (!('Request' in _global)) {
-  _global.Request = class FakeRequest {
-    readonly text = () => Promise.resolve(this.init.body);
-    constructor(
-      readonly url: string,
-      readonly init: { readonly body: string }
-    ) {}
-  };
-
-  _global.Response = class FakeResponse {
-    status: number;
-    statusText: string;
-    readonly text = () => Promise.resolve(this._body);
-    readonly json = () => Promise.resolve(this._body ? JSON.parse(this._body) : {});
-
-    constructor(
-      readonly _body: string | null,
-      init?: {
-        readonly status?: number;
-        readonly statusText?: string;
-      }
-    ) {
-      this.status = init?.status ?? 0;
-      this.statusText = init?.statusText ?? '';
-    }
-  };
-}
+import './global_mock';
 
 describe('http client', () => {
   const mockFetch = jest.fn();
@@ -46,7 +18,7 @@ describe('http client', () => {
   });
 
   describe('interceptor hooks', () => {
-    it('should wrap client and modify request with preRequest', () => {
+    it('preRequest should wrap client and modify request', () => {
       const handler = jest.fn((req) => req);
       const spy = jest.fn((req: Request) => new Request(req.url + '?intercepted=true'));
 
@@ -62,7 +34,7 @@ describe('http client', () => {
       expect(handler.mock.calls[0][0].url).toContain('?intercepted=true');
     });
 
-    it('should execute postRequest to transform response', async () => {
+    it('postRequest should transform response', async () => {
       const mockResponse = Promise.resolve(
         new Response(JSON.stringify({ ok: true }), { status: 200 })
       );
@@ -81,9 +53,9 @@ describe('http client', () => {
       expect(result).toBe(JSON.stringify({ ok: true }));
     });
 
-    it('should call init handler with config', () => {
+    it('init: should transform config', () => {
       const initSpy = jest.fn();
-      const client = http(() => new Response()).wrap(
+      const client = http(mockFetch).wrap(
         interceptor({
           init: initSpy
         }),
@@ -95,7 +67,7 @@ describe('http client', () => {
       expect(initSpy).toHaveBeenCalledWith({ debug: true });
     });
 
-    it('should merge config from init and interceptor', () => {
+    it('merge all configs', () => {
       const spy = jest.fn();
       const handler = jest.fn((req) => req);
 
@@ -104,6 +76,10 @@ describe('http client', () => {
           preRequest: (req, cfg) => {
             spy(cfg);
             return req;
+          },
+          defaultConfig: {
+            a: 0,
+            c: 3
           }
         }),
         { a: 1 }
@@ -111,7 +87,7 @@ describe('http client', () => {
 
       client('/foo', { config: { b: 2 } });
 
-      expect(spy).toHaveBeenCalledWith({ a: 1, b: 2 });
+      expect(spy).toHaveBeenCalledWith({ a: 1, b: 2, c: 3 });
     });
   });
 
@@ -135,6 +111,26 @@ describe('http client', () => {
       await expect(client('/')).rejects.toThrow('Bad Request');
     });
 
+    it('httpErrorCode should not throw', async () => {
+      const res = new Response('Bad Request', { status: 301, statusText: 'Redirect' });
+      const client = http(() => Promise.resolve(res)).wrap(httpErrorCode);
+
+      await expect(client('/')).resolves.toEqual(expect.anything());
+    });
+
+    it('httpErrorCode should not throw based on config', async () => {
+      const res = new Response('Bad Request', { status: 404, statusText: 'Not Found' });
+      const client = http(() => Promise.resolve(res)).wrap(httpErrorCode);
+
+      await expect(
+        client('/', {
+          config: {
+            errorCode: 405
+          }
+        })
+      ).resolves.toEqual(expect.anything());
+    });
+
     it('httpBodySerialize should parse body', async () => {
       let resBody = Promise.resolve('');
       const client = http((req) => {
@@ -145,6 +141,18 @@ describe('http client', () => {
       client('/test', { data: { a: 174 } });
 
       expect(await resBody).toBe('{"a":174}');
+    });
+
+    it('httpBodySerialize should not parse', async () => {
+      let resBody = Promise.resolve('');
+      const client = http((req) => {
+        resBody = (req as Request).text();
+        return Promise.resolve(new Response());
+      }).wrap(httpBodySerialize);
+
+      client('/test');
+
+      expect(await resBody).toBeUndefined();
     });
   });
 

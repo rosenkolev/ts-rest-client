@@ -1,4 +1,5 @@
-import { rest } from '../../src';
+import { rest, HttpHandler } from '../../src';
+import './global_mock';
 
 describe('rest client generator - extended tests', () => {
   const mockHttp = jest.fn();
@@ -7,10 +8,9 @@ describe('rest client generator - extended tests', () => {
   });
 
   const baseUrl = 'https://api.example.com';
-
-  const client = rest({
+  const client = rest<HttpHandler>({
     baseUrl,
-    http: mockHttp
+    http: (info, init) => mockHttp(info, init)
   });
 
   const api = client('/v1', (r) => [
@@ -38,6 +38,22 @@ describe('rest client generator - extended tests', () => {
       })
     ])
   ]);
+
+  it('should init default', async () => {
+    const _fetch = globalThis['fetch'];
+    const mockFnFetch = jest.fn().mockResolvedValue(new Response());
+    globalThis['fetch'] = mockFnFetch;
+    try {
+      const client = rest()('a', ({ get }) => [get('b')]);
+      await client.b();
+      expect(mockFnFetch).toHaveBeenCalledWith(
+        expect.objectContaining({ url: 'http://localhost/a/b' }),
+        expect.anything()
+      );
+    } finally {
+      globalThis.fetch = _fetch;
+    }
+  });
 
   it('should merge member and init config', () => {
     api.withConfig({ x: 42 }, { config: { retry: 3 } });
@@ -105,7 +121,7 @@ describe('rest client generator - extended tests', () => {
     noArgs.hello();
 
     expect(mockHttp).toHaveBeenCalledWith(
-      `${baseUrl}/x/hello?`,
+      `${baseUrl}/x/hello`,
       expect.objectContaining({
         method: 'GET'
       })

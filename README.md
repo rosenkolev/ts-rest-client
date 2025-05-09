@@ -49,7 +49,7 @@ const users = api('users', ({ get, post, namespace }) => [
       take?: number;
     },
     schema: null! as { name: string }[],
-    config: { test: 'Print me in http' }
+    config: { errorCodes: 500 } // normally >=400 will throw Error
   }),
 
   get('findOne', {
@@ -106,7 +106,7 @@ const client = http()
   .wrap(httpJsonParser);
 ```
 
-- **httpBodySerialize** - Serializes init.data to request.body using JSON.stringify (e.g. `client(url, { data: { a: 1 } })).
+- **httpBodySerialize** - Serializes init.data to request.body using JSON.stringify (e.g. `client(url, { data: { a: 1 } })`).
 - **httpErrorCode** - When the request returns statusCode >= 400 throws and Error. 
 - **httpJsonParser** - Parse response body as JSON object.
 
@@ -116,17 +116,29 @@ const client = http()
 import { interceptor } from 'typed-rest-api-client';
 
 const logger = interceptor({
+  init: (config) => ({ ..config, d: 10 }),
   preRequest: (req, config) => {
-    console.log('Request:', req);
+    console.log('configs:', config);
     return req;
   },
   postRequest: async (res, config) => {
-    console.log('Response:', await res.clone().json());
+    console.log('Response:', await res.text());
     return res;
+  },
+  defaultConfig: {
+    a: -1,
+    b: -1,
+    c: -1,
+    d: -1
   }
 });
 
-const customClient = http().wrap(logger);
+http().wrap(logger, { b: 1 })(
+  'https://my.domain.com',
+  { config: { c: 2 } }
+);
+
+// logs configs: { a: -1, b: 1, c: 2, d: 10 }
 ```
 
 ## Work with other libraries
@@ -156,12 +168,11 @@ const api = rest({
 class RestClient {
   readonly #http = inject(HttpClient);
   readonly #api = rest({
-    http: (reqInfo, init) => firstValueFrom(this.#http(reqInfo as string, init.data))
+    http: (reqInfo, init) => firstValueFrom(
+      this.#http(reqInfo as string, init.data))
   });
 }
 ```
-
-Using the `rest` client will return `Observable`.
 
 ### Zod
 
@@ -195,8 +206,8 @@ const allUsers = await users.all(); // zod parse is applied
 
 **Creates a namespaced REST client:**
 
-- `rootPath` –- path of the api resource
-- `definition(fn)` –- Declaratively define methods and nested namespaces
+- `rootPath` – path of the api resource
+- `definition(fn)` – Declaratively define methods and nested namespaces
 
 ### Endpoint Creators
 
@@ -212,6 +223,7 @@ Each `config` object can include:
 - `path` – route path (e.g. /:id)
 - `args` – default argument types
 - `config` – custom config passed to interceptors
+- `schema` - validate the response body object
 
 ## License
 
