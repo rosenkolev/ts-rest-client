@@ -19,7 +19,7 @@
 - 🌐 Compatible with **browser** and **Node.js** environments
 - 🔄 Supports both **CommonJS** and **ESM** module formats
 - 🤝 Works with popular libraries like **axios**
-- 📦 **Small bundle size** for efficient builds
+- 📦 **Small bundle size** _(2.5k, gzipped: 1.2k))_ for efficient builds
 
 ---
 

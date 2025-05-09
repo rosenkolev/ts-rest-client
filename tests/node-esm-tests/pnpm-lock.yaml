@@ -12,8 +12,8 @@ importers:
         specifier: 29.7.0
         version: 29.7.0(@types/node@22.15.14)
       typed-rest-api-client:
-        specifier: 0.2.0
-        version: 0.2.0
+        specifier: 0.4.0
+        version: 0.4.0
 
 packages:
 
@@ -1047,8 +1047,8 @@ packages:
     resolution: {integrity: sha512-t0rzBq87m3fVcduHDUFhKmyyX+9eo6WQjZvf51Ea/M0Q7+T374Jp1aUiyUl0GKxp8M/OETVHSDvmkyPgvX+X2w==}
     engines: {node: '>=10'}
 
-  typed-rest-api-client@0.2.0:
-    resolution: {integrity: sha512-+VGnM7AwamtH1FGqyo3ulq+WYg70h2oyYcdfHbc79B/CVemMAQMTqpB+9j37kVJDIRGJ0jWGqoBUDvXPFz//aQ==}
+  typed-rest-api-client@0.4.0:
+    resolution: {integrity: sha512-w8ysSNWE+RgI5fz9vpD1a/HtAsPSIcD+1in4ug0J74XIgvrfpTX+O7zY/RN59YXNDpr//98GVKhpNiuQcBMyww==}
 
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
@@ -2399,7 +2399,7 @@ snapshots:
 
   type-fest@0.21.3: {}
 
-  typed-rest-api-client@0.2.0: {}
+  typed-rest-api-client@0.4.0: {}
 
   undici-types@6.21.0: {}
 
