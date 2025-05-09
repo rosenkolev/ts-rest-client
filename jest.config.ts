@@ -9,7 +9,7 @@ export default {
     tsconfig: 'tsconfig.spec.json'
   }),
 
-  modulePathIgnorePatterns: ['<rootDir>/tests/node-cjs-tests', '<rootDir>/tests/node-esm-tests'],
+  modulePathIgnorePatterns: ['<rootDir>/tests/use-test-*'],
 
   // The test environment that will be used for testing
   testEnvironment: 'jsdom',
