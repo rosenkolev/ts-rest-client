@@ -106,7 +106,7 @@ jobs:
       - publish
     strategy:
       matrix:
-        test: ['node-cjs-tests', 'node-esm-tests', 'angular']
+        test: ['use-test-node-cjs', 'use-test-node-esm', 'use-test-angular']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
