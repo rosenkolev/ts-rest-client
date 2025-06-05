@@ -211,6 +211,7 @@ export function rest<THandler extends HttpHandler<Promise<object>, object> = Htt
   }
 
   const opts: RestOptions<THandler> = {
+    /* c8 ignore next */
     baseUrl: restOptions.baseUrl ?? document.baseURI ?? '/',
     http: (restOptions.http ?? http.default()) as THandler,
     parseArgs: restOptions.parseArgs ?? defaultParseQuery,

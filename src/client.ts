@@ -6,8 +6,9 @@ export type HttpRequestInit<TConfig = {}> = RequestInit & {
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type HttpHandler<T = Promise<object>, TConfig = {}> = (
   req: RequestInfo,
-  init?: HttpRequestInit<TConfig>
+  init: HttpRequestInit<TConfig>
 ) => T;
+
 export interface Interceptor<TConfig, TRes, TOut> {
   init?: (config: TConfig) => void;
   preRequest?: (request: Request, config: TConfig) => Request;
@@ -26,7 +27,8 @@ export interface HttpClientWrapper<TIn, PConfig> {
   ): HttpClient<TOut, PConfig | TConfig>;
 }
 
-export type HttpClient<T, TConfig> = HttpHandler<T, TConfig> & HttpClientWrapper<T, TConfig>;
+export type HttpClient<T, TConfig> = ((req: RequestInfo, init?: HttpRequestInit<TConfig>) => T) &
+  HttpClientWrapper<T, TConfig>;
 
 // Interceptor factory
 const defaultRequestHandler = <TIn, TOut>(req: TIn) => req as unknown as TOut;
@@ -114,14 +116,10 @@ export const httpJsonParser = interceptor({
 
 export const httpErrorCode = interceptor<{ errorCode: number }>({
   postRequest(res, config) {
-    if (isPromise(res)) {
-      return res.then((resp) => {
-        if (resp.status >= config.errorCode) throw new Error(resp.statusText);
-        return resp;
-      });
-    }
-
-    return res;
+    return res.then((resp) => {
+      if (resp.status >= config.errorCode) throw new Error(resp.statusText);
+      return resp;
+    });
   },
   defaultConfig: {
     errorCode: 400

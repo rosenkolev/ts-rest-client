@@ -1,4 +1,4 @@
-# typed-rest-api-client [beta-release]
+# typed-rest-api-client
 
 [![npm latest version](https://img.shields.io/npm/v/typed-rest-api-client/latest?logo=npm)](https://www.npmjs.com/package/typed-rest-api-client)
 [![NPM License](https://img.shields.io/npm/l/typed-rest-api-client)](https://github.com/rosenkolev/typed-rest-api-client)
@@ -167,11 +167,25 @@ const api = rest({
 @Injectable()
 class RestClient {
   readonly #http = inject(HttpClient);
-  readonly #api = rest({
-    http: (reqInfo, init) => firstValueFrom(
-      this.#http(reqInfo as string, init.data))
+  readonly #api = rest<HttpHandler<Promise<object>>>({
+    baseUrl: '/api',
+    http: (reqInfo, init) =>
+      firstValueFrom(
+        this.#http.request(init.method as string, reqInfo as string, {
+          body: init.body,
+          headers: init.headers as Record<string, string>
+        })
+      )
   });
+
+  readonly topics = this.#api('/topics', ({ get }) => [
+    get('all', {
+      path: '/'
+    })
+  ]);
 }
+
+// await inject(RestClient).topics.all();
 ```
 
 ### Zod

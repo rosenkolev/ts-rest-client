@@ -1,4 +1,5 @@
 import { http, interceptor, httpErrorCode, httpJsonParser, httpBodySerialize } from '../../src';
+import { InterceptorApplier } from '../../src/client';
 import './global_mock';
 
 describe('http client', () => {
@@ -104,6 +105,16 @@ describe('http client', () => {
       expect(result).toEqual(jsonData);
     });
 
+    it('httpJsonParser supports non Promise', async () => {
+      const data = {};
+      const client = http(() => data).wrap(
+        httpJsonParser as unknown as InterceptorApplier<{}, object, object> // eslint-disable-line @typescript-eslint/no-empty-object-type
+      );
+
+      const result = await client('/');
+      expect(result).toBe(data);
+    });
+
     it('httpErrorCode should throw on HTTP error status', async () => {
       const res = new Response('Bad Request', { status: 400, statusText: 'Bad Request' });
       const client = http(() => Promise.resolve(res)).wrap(httpErrorCode);
@@ -153,6 +164,48 @@ describe('http client', () => {
       client('/test');
 
       expect(await resBody).toBeUndefined();
+    });
+
+    it('httpBodySerialize supports non Promise', async () => {
+      const data = {};
+      const client = http(() => data).wrap(
+        httpBodySerialize as unknown as InterceptorApplier<{}, object, object> // eslint-disable-line @typescript-eslint/no-empty-object-type
+      );
+
+      const result = await client('/');
+      expect(result).toBe(data);
+    });
+
+    it('httpBodySerialize append content-type', async () => {
+      const client = http(mockFetch).wrap(httpBodySerialize);
+      await client('/', { data: {} });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          init: expect.objectContaining({
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+        }),
+        expect.anything()
+      );
+    });
+
+    it('httpBodySerialize not append content-type', async () => {
+      const client = http(mockFetch).wrap(httpBodySerialize, { appendContentType: false });
+      await client('/', { data: {} });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          init: expect.not.objectContaining({
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+        }),
+        expect.anything()
+      );
     });
   });
 

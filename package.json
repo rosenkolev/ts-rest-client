@@ -1,7 +1,7 @@
 {
   "name": "typed-rest-api-client",
   "description": "A javascript/typescript library to connect to RESTful APIs",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "private": false,
   "scripts": {
     "build": "tsc && node scripts/build.js",
@@ -57,5 +57,6 @@
     "ts-node": "^10.9.2",
     "typescript": "~5.7.3",
     "typescript-eslint": "^8.31.1"
-  }
+  },
+  "packageManager": "pnpm@10.11.1+sha512.e519b9f7639869dc8d5c3c5dfef73b3f091094b0a006d7317353c72b124e80e1afd429732e28705ad6bfa1ee879c1fce46c128ccebd3192101f43dd67c667912"
 }
